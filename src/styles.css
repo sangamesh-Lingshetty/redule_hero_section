@@ -1,0 +1,283 @@
+@import "tailwindcss";
+
+:root {
+  color: #deeff1;
+  background: #08090b;
+  font-family: "Chakra Petch", Bahnschrift, "Arial Narrow", Arial, sans-serif;
+  font-synthesis: none;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+html {
+  background: #08090b;
+}
+
+body {
+  overflow-x: hidden;
+  background: #08090b;
+}
+
+.hero-scroll {
+  position: relative;
+  width: 100%;
+  height: 700dvh;
+  background: #08090b;
+}
+
+.hero-viewport {
+  position: sticky;
+  top: 0;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #08090b;
+}
+
+canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  touch-action: pan-y;
+}
+
+canvas.is-node-hovered {
+  cursor: pointer;
+}
+
+.hero-brand,
+.hero-telemetry {
+  position: absolute;
+  top: 28px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  font-family: "Chakra Petch", Bahnschrift, "Arial Narrow", Arial, sans-serif;
+  letter-spacing: 0;
+}
+
+.hero-brand {
+  left: 32px;
+  gap: 12px;
+}
+
+.hero-brand strong {
+  color: #e6f7f8;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.hero-brand span {
+  color: rgb(119 178 186 / 68%);
+  font-size: 9px;
+}
+
+.hero-telemetry {
+  right: 32px;
+  gap: 8px;
+  color: rgb(159 214 220 / 78%);
+  font-size: 9px;
+}
+
+.hero-telemetry-dot {
+  width: 5px;
+  height: 5px;
+  background: #55dcee;
+  box-shadow: 0 0 7px rgb(85 220 238 / 52%);
+}
+
+.hero-telemetry-progress {
+  min-width: 28px;
+  color: rgb(230 247 248 / 88%);
+  text-align: right;
+}
+
+.pipeline-label-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pipeline-label {
+  --pipeline-label-offset: 70px;
+
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translate(-50%, var(--pipeline-label-offset));
+  white-space: nowrap;
+  font-family: "Chakra Petch", Bahnschrift, "Arial Narrow", Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.pipeline-label.is-offscreen {
+  visibility: hidden;
+}
+
+.pipeline-label-name {
+  color: rgb(205 226 229 / 72%);
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.05;
+  text-shadow: 0 1px 8px rgb(0 0 0 / 90%);
+  text-transform: uppercase;
+  transition: color 160ms ease, text-shadow 160ms ease;
+}
+
+.pipeline-label-caption {
+  color: rgb(127 165 170 / 58%);
+  font-family: Bahnschrift, Arial, sans-serif;
+  font-size: 9px;
+  line-height: 1.1;
+  transition: color 160ms ease;
+}
+
+.pipeline-label-status {
+  min-height: 9px;
+  color: rgb(95 195 207 / 0%);
+  font-size: 8px;
+  line-height: 1;
+  transition: color 160ms ease;
+}
+
+.pipeline-label[data-state="active"] .pipeline-label-name,
+.pipeline-label[data-state="active"] .pipeline-label-status {
+  color: #baf7fc;
+  text-shadow: 0 0 12px rgb(74 222 238 / 42%);
+}
+
+.pipeline-label[data-state="active"] .pipeline-label-caption {
+  color: rgb(155 219 225 / 88%);
+}
+
+.pipeline-label[data-state="completed"] .pipeline-label-name {
+  color: rgb(190 230 234 / 84%);
+}
+
+.pipeline-label[data-state="completed"] .pipeline-label-status {
+  color: rgb(92 190 201 / 76%);
+}
+
+.node-tooltip {
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  width: min(236px, calc(100% - 24px));
+  padding: 12px 14px;
+  border: 1px solid rgb(79 186 200 / 34%);
+  border-left-color: rgb(93 224 239 / 78%);
+  border-radius: 4px;
+  opacity: 0;
+  color: #dff2f4;
+  background: rgb(7 14 17 / 94%);
+  box-shadow: 0 12px 28px rgb(0 0 0 / 32%);
+  transform: translateY(3px);
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+  letter-spacing: 0;
+}
+
+.node-tooltip.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.node-tooltip-eyebrow {
+  margin-bottom: 5px;
+  color: rgb(77 207 222 / 72%);
+  font-size: 8px;
+}
+
+.node-tooltip-title {
+  margin-bottom: 5px;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.node-tooltip-description {
+  color: rgb(190 215 219 / 82%);
+  font-family: Bahnschrift, Arial, sans-serif;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.node-tooltip-status {
+  margin-top: 10px;
+  color: rgb(111 204 214 / 78%);
+  font-size: 8px;
+}
+
+.node-tooltip-status[data-state="active"] {
+  color: #8debf5;
+}
+
+@media (max-width: 639px) {
+  .hero-scroll {
+    height: 620dvh;
+  }
+
+  .hero-brand,
+  .hero-telemetry {
+    top: 18px;
+  }
+
+  .hero-brand {
+    left: 18px;
+  }
+
+  .hero-brand span {
+    display: none;
+  }
+
+  .hero-telemetry {
+    right: 18px;
+    font-size: 8px;
+  }
+
+  .pipeline-label {
+    --pipeline-label-offset: 66px;
+
+    gap: 2px;
+  }
+
+  .pipeline-label-name {
+    font-size: 10px;
+  }
+
+  .pipeline-label-caption {
+    display: none;
+  }
+
+  .pipeline-label-status {
+    min-height: 6px;
+    font-size: 5px;
+  }
+
+  .node-tooltip {
+    width: min(210px, calc(100% - 24px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pipeline-label-status,
+  .node-tooltip {
+    transition: none;
+  }
+}
