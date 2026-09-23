@@ -33,7 +33,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'Business context',
     description: 'Tenant / business container',
     position: [-5.4, -1.08, 0.62],
-    mobilePosition: [-0.82, 2.7, 0.8],
+    mobilePosition: [-0.9, 3.3, 0.8],
     connectorClearance: 0.82,
   },
   {
@@ -42,7 +42,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'Autonomous workers',
     description: 'Autonomous AI agents operating within the workspace',
     position: [-3.62, -0.72, 0.12],
-    mobilePosition: [0.72, 1.8, -0.15],
+    mobilePosition: [0.82, 2.2, -0.15],
     connectorClearance: 0.76,
   },
   {
@@ -51,7 +51,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'Webhook \u00b7 Cron \u00b7 Message',
     description: 'Webhooks \u00b7 Cron \u00b7 Inbound Messages',
     position: [-1.83, -0.36, -0.42],
-    mobilePosition: [-0.68, 0.9, -0.8],
+    mobilePosition: [-0.82, 1.1, -0.8],
     connectorClearance: 0.82,
   },
   {
@@ -60,7 +60,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'Immutable event',
     description: 'Immutable event created from a trigger',
     position: [-0.05, 0, -0.12],
-    mobilePosition: [0.72, 0, 0.15],
+    mobilePosition: [0.82, 0, 0.15],
     connectorClearance: 0.76,
   },
   {
@@ -69,7 +69,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'Reason \u00b7 Branch \u00b7 Select',
     description: 'Reasoning and decision layer',
     position: [1.78, 0.36, 0.42],
-    mobilePosition: [-0.68, -0.9, 0.85],
+    mobilePosition: [-0.82, -1.1, 0.85],
     connectorClearance: 0.92,
   },
   {
@@ -78,7 +78,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'CRM \u00b7 Message \u00b7 API \u00b7 Action',
     description: 'Authorized action execution',
     position: [3.62, 0.72, -0.02],
-    mobilePosition: [0.72, -1.8, -0.35],
+    mobilePosition: [0.82, -2.2, -0.35],
     connectorClearance: 0.8,
   },
   {
@@ -87,7 +87,7 @@ export const pipelineStages: readonly PipelineStage[] = [
     caption: 'Verified result',
     description: 'Verified confirmed result',
     position: [5.38, 1.08, 0.52],
-    mobilePosition: [-0.05, -2.7, 0.65],
+    mobilePosition: [-0.12, -3.3, 0.65],
     connectorClearance: 0.72,
   },
 ] as const;

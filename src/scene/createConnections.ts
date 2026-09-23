@@ -24,7 +24,7 @@ export interface ConnectionRuntime {
   material: THREE.MeshBasicMaterial;
   start: THREE.Vector3;
   end: THREE.Vector3;
-  curve: THREE.QuadraticBezierCurve3;
+  curve: THREE.Curve<THREE.Vector3>;
 }
 
 export interface ConnectionSystemRuntime {
@@ -33,13 +33,27 @@ export interface ConnectionSystemRuntime {
   pulse: THREE.Mesh<THREE.OctahedronGeometry, THREE.MeshBasicMaterial>;
   pulseShell: THREE.LineSegments<THREE.EdgesGeometry, THREE.LineBasicMaterial>;
   pulseTrail: THREE.Mesh<THREE.OctahedronGeometry, THREE.MeshBasicMaterial>[];
-  setLayout(positions: readonly PipelinePosition[]): void;
+  setLayout(positions: readonly PipelinePosition[], compact?: boolean): void;
 }
 
 function createRouteCurve(
   start: THREE.Vector3,
   end: THREE.Vector3,
-): THREE.QuadraticBezierCurve3 {
+  compact = false,
+): THREE.Curve<THREE.Vector3> {
+  if (compact) {
+    const firstControl = start.clone().lerp(end, 0.34);
+    const secondControl = start.clone().lerp(end, 0.66);
+    firstControl.z += 0.18;
+    secondControl.z += 0.18;
+    return new THREE.CubicBezierCurve3(
+      start,
+      firstControl,
+      secondControl,
+      end,
+    );
+  }
+
   const control = start.clone().lerp(end, 0.5);
   control.y += 0.035;
   control.z += 0.16;
@@ -52,6 +66,7 @@ function setRouteLayout(
   to: PipelinePosition,
   fromClearance: number,
   toClearance: number,
+  compact = false,
 ): void {
   connection.start.set(...from);
   connection.end.set(...to);
@@ -60,9 +75,14 @@ function setRouteLayout(
     .sub(connection.start)
     .normalize();
 
-  connection.start.addScaledVector(direction, fromClearance);
-  connection.end.addScaledVector(direction, -toClearance);
-  connection.curve = createRouteCurve(connection.start, connection.end);
+  const clearanceScale = compact ? 0.88 : 1;
+  connection.start.addScaledVector(direction, fromClearance * clearanceScale);
+  connection.end.addScaledVector(direction, -toClearance * clearanceScale);
+  connection.curve = createRouteCurve(
+    connection.start,
+    connection.end,
+    compact,
+  );
 
   connection.route.geometry.dispose();
   connection.energyRoute.geometry.dispose();
@@ -187,7 +207,10 @@ export function createConnections(
     return trail;
   });
 
-  const setLayout = (positions: readonly PipelinePosition[]): void => {
+  const setLayout = (
+    positions: readonly PipelinePosition[],
+    compact = false,
+  ): void => {
     if (positions.length !== stages.length) {
       throw new Error('Connection layout must include every pipeline stage.');
     }
@@ -199,6 +222,7 @@ export function createConnections(
         positions[index + 1],
         stages[index].connectorClearance,
         stages[index + 1].connectorClearance,
+        compact,
       );
     }
   };

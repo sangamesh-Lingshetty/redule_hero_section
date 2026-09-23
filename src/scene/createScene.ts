@@ -20,6 +20,7 @@ const MAX_DEVICE_PIXEL_RATIO = 2;
 const MOBILE_DEVICE_PIXEL_RATIO = 1.35;
 const CAMERA_FOV = 36;
 const MOBILE_BREAKPOINT = 640;
+const MOBILE_NODE_SCALE = 0.94;
 
 interface StageLabelRuntime {
   element: HTMLDivElement;
@@ -150,6 +151,9 @@ export function createScene(container: HTMLElement): SceneController {
     nodes.set(stage.id, node);
     scene.add(node.root);
   });
+  const desktopNodeScales = new Map(
+    Array.from(nodes, ([id, node]) => [id, node.baseScale.clone()]),
+  );
 
   const ambient = createAmbientController(nodes);
   const pipeline = createPipelineController(
@@ -211,10 +215,14 @@ export function createScene(container: HTMLElement): SceneController {
       const node = nodes.get(pipelineStages[index].id);
       if (!node) continue;
       node.basePosition.set(...positions[index]);
+      node.baseScale
+        .copy(desktopNodeScales.get(node.id) ?? node.baseScale)
+        .multiplyScalar(compact ? MOBILE_NODE_SCALE : 1);
       node.root.position.copy(node.basePosition);
+      node.root.scale.copy(node.baseScale);
     }
 
-    connectionSystem.setLayout(positions);
+    connectionSystem.setLayout(positions, compact);
     environment.setCompact(compact);
     container.classList.toggle('is-compact-scene', compact);
   };
