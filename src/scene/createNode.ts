@@ -532,7 +532,7 @@ function addTriggers(group: THREE.Group, materials: NodeMaterials): NodeParts {
     frame,
     rings: [],
     mechanisms: [],
-    secondary: [inputGroup],
+    secondary: semantic.inputs,
     semantic,
   };
 }

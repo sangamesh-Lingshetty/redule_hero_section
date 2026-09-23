@@ -28,6 +28,7 @@ interface StageLabelRuntime {
 
 interface SceneOverlay {
   elements: StageLabelRuntime[];
+  halo: HTMLDivElement;
   layer: HTMLDivElement;
   systemState: HTMLSpanElement;
   progress: HTMLSpanElement;
@@ -41,6 +42,10 @@ export interface SceneController {
 }
 
 function createOverlay(container: HTMLElement): SceneOverlay {
+  const halo = document.createElement('div');
+  halo.className = 'active-stage-halo';
+  halo.setAttribute('aria-hidden', 'true');
+
   const brand = document.createElement('div');
   brand.className = 'hero-brand';
   brand.setAttribute('aria-hidden', 'true');
@@ -86,13 +91,15 @@ function createOverlay(container: HTMLElement): SceneOverlay {
     return { element: label, status };
   });
 
-  container.append(brand, telemetry, layer);
+  container.append(halo, brand, telemetry, layer);
   return {
     elements,
+    halo,
     layer,
     systemState,
     progress,
     dispose(): void {
+      halo.remove();
       brand.remove();
       telemetry.remove();
       layer.remove();
@@ -118,7 +125,7 @@ function stageStatus(node: NodeRuntime): string {
 
 export function createScene(container: HTMLElement): SceneController {
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x08090b);
+  scene.fog = new THREE.Fog(0x05080b, 15.5, 28);
   const camera = new THREE.PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
   const cameraChoreography = createCameraChoreography(camera);
 
@@ -158,9 +165,12 @@ export function createScene(container: HTMLElement): SceneController {
   scene.add(keyLight);
 
   const renderer = new THREE.WebGLRenderer({
+    alpha: true,
     antialias: true,
     powerPreference: 'high-performance',
+    premultipliedAlpha: false,
   });
+  renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.95;
@@ -211,6 +221,9 @@ export function createScene(container: HTMLElement): SceneController {
 
   const updateLabels = (): void => {
     let activeId: PipelineStageId | null = null;
+    let activeScreenX = 0;
+    let activeScreenY = 0;
+    let activeVisible = false;
 
     for (let index = 0; index < pipelineStages.length; index += 1) {
       const stage = pipelineStages[index];
@@ -219,15 +232,16 @@ export function createScene(container: HTMLElement): SceneController {
 
       projectedPosition.copy(node.root.position).project(camera);
       const label = overlay.elements[index];
-      label.element.style.left = `${(projectedPosition.x * 0.5 + 0.5) * viewportWidth}px`;
-      label.element.style.top = `${(-projectedPosition.y * 0.5 + 0.5) * viewportHeight}px`;
-      label.element.classList.toggle(
-        'is-offscreen',
+      const screenX = (projectedPosition.x * 0.5 + 0.5) * viewportWidth;
+      const screenY = (-projectedPosition.y * 0.5 + 0.5) * viewportHeight;
+      const isOffscreen =
         projectedPosition.x < -0.92 ||
-          projectedPosition.x > 0.92 ||
-          projectedPosition.y < -0.96 ||
-          projectedPosition.y > 0.96,
-      );
+        projectedPosition.x > 0.92 ||
+        projectedPosition.y < -0.96 ||
+        projectedPosition.y > 0.96;
+      label.element.style.left = `${screenX}px`;
+      label.element.style.top = `${screenY}px`;
+      label.element.classList.toggle('is-offscreen', isOffscreen);
       if (label.element.dataset.state !== node.state) {
         label.element.dataset.state = node.state;
       }
@@ -237,8 +251,19 @@ export function createScene(container: HTMLElement): SceneController {
       }
       if (node.state === 'active') {
         activeId = node.id;
+        activeScreenX = screenX;
+        activeScreenY = screenY;
+        activeVisible = !isOffscreen;
       }
     }
+
+    const showHalo =
+      activeId !== null && activeVisible && !compactLayout && !reducedMotion;
+    if (showHalo) {
+      overlay.halo.style.left = `${activeScreenX}px`;
+      overlay.halo.style.top = `${Math.min(activeScreenY + 34, viewportHeight - 70)}px`;
+    }
+    overlay.halo.classList.toggle('is-active', showHalo);
 
     const progressText = `${String(Math.round(pipeline.progress * 100)).padStart(2, '0')}%`;
     if (overlay.progress.textContent !== progressText) {

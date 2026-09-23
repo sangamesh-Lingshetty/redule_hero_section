@@ -189,6 +189,11 @@ export function createAmbientController(
           }
           break;
         case 'triggers':
+          if (state.secondary[1]) {
+            state.secondary[1].object.rotation.z =
+              state.secondary[1].rotation.z +
+              wrappedRotation(elapsedTime, 0.045);
+          }
           break;
         case 'events':
           if (state.mechanisms[0]) {

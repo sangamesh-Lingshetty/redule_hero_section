@@ -66,9 +66,9 @@ export function createEnvironment(
   group.name = 'environment';
 
   const gridMaterial = new THREE.LineBasicMaterial({
-    color: 0x245660,
+    color: 0x2c6872,
     transparent: true,
-    opacity: 0.045,
+    opacity: 0.11,
     depthWrite: false,
   });
   const projectionMaterial = new THREE.LineBasicMaterial({

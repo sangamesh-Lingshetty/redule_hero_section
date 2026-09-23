@@ -9,7 +9,6 @@ import type {
   ConnectionSystemRuntime,
   ConnectionVisualState,
 } from '../createConnections';
-import type { MotionEffectsRuntime } from '../createMotionEffects';
 import type {
   NodeRuntime,
   NodeVisualState,
@@ -37,9 +36,6 @@ interface ConnectionVisualSnapshot {
 export interface PipelineController {
   readonly progress: number;
   readonly autoplayEnabled: boolean;
-  readonly focusPoint: THREE.Vector3;
-  readonly activityStrength: number;
-  readonly cameraFocusStrength: number;
   setProgress(progress: number): void;
   setAutoplayEnabled(enabled: boolean, elapsedTime?: number): void;
   setHovered(stageId: PipelineStageId | null): void;
@@ -60,8 +56,7 @@ const COMPLETED_STRENGTH = 0.5;
 const TERMINAL_ACTIVE_STRENGTH = 1.12;
 const TERMINAL_COMPLETED_STRENGTH = 0.68;
 const FIRST_ACTIVATION_END = 0.16;
-const CONFIRMATION_REVERSE_END = 0.52;
-const TRAIL_SPACING = 0.038;
+const TRAIL_SPACING = 0.16;
 const TRAVEL_STARTS: Record<PipelineStageId, number> = {
   workspace: 0.73,
   agents: 0.784,
@@ -584,7 +579,6 @@ export function createPipelineController(
   nodes: ReadonlyMap<PipelineStageId, NodeRuntime>,
   connectionSystem: ConnectionSystemRuntime,
   orderedIds: readonly PipelineStageId[],
-  motionEffects: MotionEffectsRuntime,
 ): PipelineController {
   const nodeVisuals = orderedIds.map((id) => {
     const node = nodes.get(id);
@@ -603,7 +597,6 @@ export function createPipelineController(
   const pulseShell = connectionSystem.pulseShell;
   const pulseTrail = connectionSystem.pulseTrail;
   const trailPoint = new THREE.Vector3();
-  const focusPoint = new THREE.Vector3();
   const totalCycleDuration =
     PIPELINE_AUTOPLAY_TIMING.idlePause +
     PIPELINE_AUTOPLAY_TIMING.execution +
@@ -616,8 +609,6 @@ export function createPipelineController(
   let hoveredId: PipelineStageId | null = null;
   let reducedMotion = false;
   let compact = false;
-  let activityStrength = 0;
-  let cameraFocusStrength = 0;
 
   const hidePulse = (): void => {
     pulse.visible = false;
@@ -637,9 +628,7 @@ export function createPipelineController(
       uniforms.uIntensity.value = 0;
       uniforms.uOpacity.value = 1;
       uniforms.uReverse.value = 0;
-      uniforms.uTailLength.value = compact ? 0.14 : 0.26;
-      uniforms.uAmbient.value = 0.012;
-      uniforms.uTime.value = currentTime;
+      uniforms.uTailLength.value = compact ? 0.12 : 0.18;
     }
     hidePulse();
   };
@@ -693,17 +682,12 @@ export function createPipelineController(
     connection.energyUniforms.uIntensity.value = intensity;
     connection.energyUniforms.uOpacity.value = 1;
     connection.energyUniforms.uReverse.value = reverse ? 1 : 0;
-    connection.energyUniforms.uTailLength.value = compact ? 0.14 : 0.26;
+    connection.energyUniforms.uTailLength.value = compact ? 0.12 : 0.18;
     placePulse(connection, easedProgress, intensity, reverse);
-    focusPoint.copy(pulse.position);
-    activityStrength = Math.max(activityStrength, intensity);
-    cameraFocusStrength = Math.max(cameraFocusStrength, 0.32 * intensity);
   };
 
   const applyVisuals = (resetMix = 0): void => {
     const retained = 1 - smoothstep(0, 1, resetMix);
-    let activeNode: NodeRuntime | null = null;
-
     for (let index = 0; index < nodeVisuals.length; index += 1) {
       const pipelineStrength = nodeStrengths[index] * retained;
       const hoverStrength = nodeVisuals[index].node.id === hoveredId ? 0.18 : 0;
@@ -715,9 +699,6 @@ export function createPipelineController(
         nodePhases[index],
         reducedMotion,
       );
-      if (nodeStates[index] === 'active' && pipelineStrength > 0.001) {
-        activeNode = nodeVisuals[index].node;
-      }
     }
 
     for (let index = 0; index < connectionVisuals.length; index += 1) {
@@ -729,23 +710,13 @@ export function createPipelineController(
       );
     }
 
-    if (activeNode && cameraFocusStrength < 0.3) {
-      focusPoint.copy(activeNode.root.position);
-      activityStrength = Math.max(activityStrength, retained);
-      cameraFocusStrength = Math.max(cameraFocusStrength, 0.14 * retained);
-    }
-    motionEffects.updateArrival(activeNode, reducedMotion);
-
     if (resetMix > 0) {
       pulse.material.opacity *= retained;
       pulseShell.material.opacity *= retained;
       for (const trail of pulseTrail) trail.material.opacity *= retained;
       for (const visual of connectionVisuals) {
         visual.connection.energyUniforms.uIntensity.value *= retained;
-        visual.connection.energyUniforms.uAmbient.value *= retained;
       }
-      activityStrength *= retained;
-      cameraFocusStrength *= retained;
     }
   };
 
@@ -755,35 +726,8 @@ export function createPipelineController(
     connectionStrengths.fill(0);
     nodeStates.fill('idle');
     connectionStates.fill('base');
-    focusPoint.set(0, 0, 0);
-    activityStrength = 0;
-    cameraFocusStrength = 0;
     resetConnectionWaves();
     applyVisuals();
-  };
-
-  const renderConfirmation = (confirmationProgress: number): void => {
-    if (reducedMotion) return;
-    const connectionCount = connectionVisuals.length;
-    const reversing = confirmationProgress < CONFIRMATION_REVERSE_END;
-    const passProgress = reversing
-      ? confirmationProgress / CONFIRMATION_REVERSE_END
-      : (confirmationProgress - CONFIRMATION_REVERSE_END) /
-        (1 - CONFIRMATION_REVERSE_END);
-    const scaled = Math.min(passProgress, 0.99999) * connectionCount;
-    const passIndex = Math.min(Math.floor(scaled), connectionCount - 1);
-    const localProgress = scaled - passIndex;
-    const connectionIndex = reversing
-      ? connectionCount - 1 - passIndex
-      : passIndex;
-    const settle = 1 - smoothstep(0.9, 1, confirmationProgress);
-    setConnectionWave(
-      connectionIndex,
-      localProgress,
-      (reversing ? 0.5 : 0.58) * settle,
-      reversing,
-    );
-    cameraFocusStrength *= 0.62;
   };
 
   const renderProgress = (progress: number, resetMix = 0): void => {
@@ -793,9 +737,6 @@ export function createPipelineController(
     connectionStrengths.fill(0);
     nodeStates.fill('idle');
     connectionStates.fill('base');
-    focusPoint.set(0, 0, 0);
-    activityStrength = 0;
-    cameraFocusStrength = 0;
     resetConnectionWaves();
 
     const connectionCount = connectionVisuals.length;
@@ -814,15 +755,6 @@ export function createPipelineController(
         connectionStates[index] = 'completed';
         connectionStrengths[index] = COMPLETED_STRENGTH;
       }
-      const confirmationProgress = intervalProgress(
-        currentProgress,
-        VERIFIED_PROGRESS_START,
-        1,
-      );
-      focusPoint.copy(nodeVisuals[outcomeIndex].node.root.position);
-      activityStrength = 0.48;
-      cameraFocusStrength = 0.12;
-      renderConfirmation(confirmationProgress);
       applyVisuals(resetMix);
       return;
     }
@@ -861,10 +793,6 @@ export function createPipelineController(
       nodeStates[sourceIndex] = 'active';
       nodeStrengths[sourceIndex] = sourceActivation;
       nodePhases[sourceIndex] = segmentProgress;
-      focusPoint.copy(nodeVisuals[sourceIndex].node.root.position);
-      activityStrength = sourceActivation;
-      cameraFocusStrength = sourceActivation * 0.14;
-
       if (segmentProgress >= travelStart) {
         const travel = intervalProgress(segmentProgress, travelStart, 1);
         connectionStates[sourceIndex] = 'processing';
@@ -883,9 +811,6 @@ export function createPipelineController(
       nodeStates[outcomeIndex] = 'active';
       nodeStrengths[outcomeIndex] = TERMINAL_ACTIVE_STRENGTH;
       nodePhases[outcomeIndex] = segmentProgress;
-      focusPoint.copy(nodeVisuals[outcomeIndex].node.root.position);
-      activityStrength = 1;
-      cameraFocusStrength = 0.18;
     }
 
     applyVisuals(resetMix);
@@ -934,15 +859,6 @@ export function createPipelineController(
     },
     get autoplayEnabled(): boolean {
       return autoplayEnabled;
-    },
-    get focusPoint(): THREE.Vector3 {
-      return focusPoint;
-    },
-    get activityStrength(): number {
-      return activityStrength;
-    },
-    get cameraFocusStrength(): number {
-      return cameraFocusStrength;
     },
     setProgress(progress: number): void {
       autoplayEnabled = false;
